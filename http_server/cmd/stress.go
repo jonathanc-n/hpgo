@@ -1,9 +1,4 @@
-// cmd/start.go
-//
-// This is all making GET requests to the same url, this
-// process can be simplified using the 'sync' library with the WaitGroup
-// function.
-
+// cmd/stress.go
 package cmd
 
 import (
@@ -13,13 +8,12 @@ import (
 	"os"
 	"strconv"
 	"strings"
-	"sync"
 	"github.com/spf13/cobra"
 )
 
-var getCmd = &cobra.Command{
-	Use:   "get [url] [numberOfTimes]",
-	Short: "Make GET request",
+var stressCmd = &cobra.Command{
+	Use:   "head [url] [numberOfTimes]",
+	Short: "Make HEAD request",
 	Args: func(cmd *cobra.Command, args []string) error {
         if len(args) < 1 {
             return fmt.Errorf("requires at least one argument")
@@ -46,34 +40,27 @@ var getCmd = &cobra.Command{
 		if !strings.HasPrefix(url, "http://") && !strings.HasPrefix(url, "https://") {
             url = "http://" + url
         }
-		var wg sync.WaitGroup
 
 		for i := 0; i < times; i++ {
-			wg.Add(1)
-			go func() {
-				defer wg.Done()
-				response, err := http.Get(url)
-				if err != nil {
-					fmt.Println("error making GET request: ", err)
-					return
-				}
-				defer response.Body.Close()
-	
-				fmt.Println("Status:", response.Status)
-	
-				fmt.Println("Body:")
-				_, err = io.Copy(os.Stdout, response.Body)
-				if err != nil {
-					fmt.Println("error reading response body: ", err)
-					return
-				}
-			}()
+			resp, err := http.Get(url)
+			if err != nil {
+				fmt.Println("error making GET request: ", err)
+				return
+			}
+			defer resp.Body.Close()
+
+			fmt.Println("Status:", resp.Status)
+
+			fmt.Println("Body:")
+			_, err = io.Copy(os.Stdout, resp.Body)
+			if err != nil {
+				fmt.Errorf("error reading response body: %w", err)
+				return
+			}
 		}
-		wg.Wait()
-		fmt.Println("All requests completed.")
 	},
 }
 
 func init() {
-	rootCmd.AddCommand(getCmd)
+	rootCmd.AddCommand(stressCmd)
 }
