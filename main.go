@@ -1,7 +1,7 @@
 // main.go
 package main
 
-import "http_server/cmd"
+import "github.com/jonathanc-n/http-cligo/cmd"
 
 func main() {	
     cmd.Execute()

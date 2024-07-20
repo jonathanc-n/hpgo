@@ -1,4 +1,4 @@
-module http_server
+module github.com/jonathanc-n/http-cligo
 
 go 1.22.4
 

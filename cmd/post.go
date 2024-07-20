@@ -8,7 +8,7 @@ import (
 )
 
 var postCmd = &cobra.Command{
-	Use:   "start",
+	Use:   "post",
 	Short: "Make POST request",
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("Starting the web server on port 8080...")
@@ -29,5 +29,5 @@ var postCmd = &cobra.Command{
 }
 
 func init() {
-	rootCmd.AddCommand(startCmd)
+	rootCmd.AddCommand(postCmd)
 }

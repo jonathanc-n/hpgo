@@ -18,7 +18,7 @@ import (
 )
 
 var getCmd = &cobra.Command{
-	Use:   "get [url] [numberOfTimes]",
+	Use:   "get [url] [numTimes]",
 	Short: "Make GET request",
 	Args: func(cmd *cobra.Command, args []string) error {
         if len(args) < 1 {
@@ -42,7 +42,6 @@ var getCmd = &cobra.Command{
             }
         }
 
-		// Ensures the input url contains http at the front
 		if !strings.HasPrefix(url, "http://") && !strings.HasPrefix(url, "https://") {
             url = "http://" + url
         }
@@ -52,17 +51,17 @@ var getCmd = &cobra.Command{
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
-				response, err := http.Get(url)
+				resp, err := http.Get(url)
 				if err != nil {
 					fmt.Println("error making GET request: ", err)
 					return
 				}
-				defer response.Body.Close()
+				defer resp.Body.Close()
 	
-				fmt.Println("Status:", response.Status)
+				fmt.Println("Status:", resp.Status)
 	
 				fmt.Println("Body:")
-				_, err = io.Copy(os.Stdout, response.Body)
+				_, err = io.Copy(os.Stdout, resp.Body)
 				if err != nil {
 					fmt.Println("error reading response body: ", err)
 					return
