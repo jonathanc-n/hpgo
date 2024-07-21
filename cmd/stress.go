@@ -1,4 +1,4 @@
-// cmd/start.go
+// cmd/head.go
 //
 // This is all making GET requests to the same url, this
 // process can be simplified using the 'sync' library with the WaitGroup
@@ -20,11 +20,13 @@ import (
 )
 
 var stressFlags struct {
-	NumWorkers  int
+	NumWorkers  		int
+	ShowSingleProcesses bool
 }
 
 func init() {
 	stressCmd.Flags().IntVarP(&stressFlags.NumWorkers, "workers", "w", 5, "Number of concurrent go workers")
+	stressCmd.Flags().BoolVar(&stressFlags.ShowSingleProcesses, "s", false, "Shows single processes")
 	rootCmd.AddCommand(stressCmd)
 }
 
@@ -91,13 +93,13 @@ var stressCmd = &cobra.Command{
 		averageTLSTime := result.TotalTLSTimeRecorded / time.Duration(times)
 		averageTime := result.TotalTimeRecorded / time.Duration(times)
 
-		fmt.Println("Number of Requests: ", times)
+		fmt.Println("Number of Requests:", times)
 		fmt.Println("Method: 'GET'")
-		fmt.Println("Number of concurrent workers: ", stressFlags.NumWorkers)
-		fmt.Println("Average DNS Runtime: ", averageDNSTime)
-		fmt.Println("Average Connect Runtime: ", averageConnectTime)
-		fmt.Println("Average TLS Runtime: ", averageTLSTime)
-		fmt.Println("Average Total Runtime: ", averageTime)
+		fmt.Println("Number of concurrent workers:", stressFlags.NumWorkers)
+		fmt.Println("Average DNS Runtime:", averageDNSTime)
+		fmt.Println("Average Connect Runtime:", averageConnectTime)
+		fmt.Println("Average TLS Runtime:", averageTLSTime)
+		fmt.Println("Average Total Runtime:", averageTime)
 	},
 }
 
@@ -148,6 +150,8 @@ func getRequest(url string, wg *sync.WaitGroup, ch chan <- measuredResponse) {
 	measured.Res = resp
 	defer resp.Body.Close()
 	
-	fmt.Printf("Status: %s\nTotal Time: %v\n\n", resp.Status, measured.TotalTime)
+	if stressFlags.ShowSingleProcesses {
+		fmt.Printf("Status: %s\nTotal Time: %v\n\n", resp.Status, measured.TotalTime)
+	}
 	ch <- measured
 }
