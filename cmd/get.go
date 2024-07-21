@@ -45,6 +45,7 @@ var getCmd = &cobra.Command{
 		if !strings.HasPrefix(url, "http://") && !strings.HasPrefix(url, "https://") {
             url = "http://" + url
         }
+	
 		var wg sync.WaitGroup
 
 		for i := 0; i < times; i++ {
