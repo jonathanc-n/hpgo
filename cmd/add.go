@@ -50,7 +50,7 @@ var addCmd = &cobra.Command{
 			return
 		}
 
-		fmt.Println("File created successfully", fileName)
+		fmt.Println("Added line successfully")
 	},
 }
 

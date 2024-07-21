@@ -15,7 +15,6 @@ import (
 	"sync"
 	"time"
 	"net/http/httptrace"
-
 	"github.com/spf13/cobra"
 )
 

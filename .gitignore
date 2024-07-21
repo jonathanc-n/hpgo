@@ -22,3 +22,5 @@ go.work
 # Built files
 htp
 dist/
+
+executble
