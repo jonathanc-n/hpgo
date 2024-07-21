@@ -19,7 +19,12 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var stressFlags struct {
+	NumWorkers  int
+}
+
 func init() {
+	stressCmd.Flags().IntVarP(&stressFlags.NumWorkers, "workers", "w", 5, "Number of concurrent go workers")
 	rootCmd.AddCommand(stressCmd)
 }
 
@@ -48,7 +53,7 @@ var stressCmd = &cobra.Command{
 		url := args[0]
 		times := 1
 		result := record{ URL : url, Method : "GET", TotalTimeRecorded : 0}
-        var err error
+        var err error	
 
         if len(args) == 2 {
             times, err = strconv.Atoi(args[1])
@@ -63,7 +68,8 @@ var stressCmd = &cobra.Command{
         }
 		var wg sync.WaitGroup
 
-		ch := make(chan measuredResponse)
+		ch := make(chan measuredResponse, stressFlags.NumWorkers)
+
 		for i := 0; i < times; i++ {
 			wg.Add(1)
 			go getRequest(url, &wg, ch)
@@ -87,6 +93,7 @@ var stressCmd = &cobra.Command{
 
 		fmt.Println("Number of Requests: ", times)
 		fmt.Println("Method: 'GET'")
+		fmt.Println("Number of concurrent workers: ", stressFlags.NumWorkers)
 		fmt.Println("Average DNS Runtime: ", averageDNSTime)
 		fmt.Println("Average Connect Runtime: ", averageConnectTime)
 		fmt.Println("Average TLS Runtime: ", averageTLSTime)
@@ -124,7 +131,7 @@ func getRequest(url string, wg *sync.WaitGroup, ch chan <- measuredResponse) {
 			measured.TLS = time.Since(tlsHandshake)
 		},
 
-		// From when the first byte response
+		// From when the first byte is registered back
 		GotFirstResponseByte: func() {
 			measured.TotalTime = time.Since(start)
 		},
@@ -141,6 +148,6 @@ func getRequest(url string, wg *sync.WaitGroup, ch chan <- measuredResponse) {
 	measured.Res = resp
 	defer resp.Body.Close()
 	
-	fmt.Printf("Status: %s\nDNS: %v \nTotal Time: %v\n\n", resp.Status, measured.DNS, measured.TotalTime)
+	fmt.Printf("Status: %s\nTotal Time: %v\n\n", resp.Status, measured.TotalTime)
 	ch <- measured
 }
