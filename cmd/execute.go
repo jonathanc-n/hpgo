@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"sync"
 	"time"
+	"math"
 	"net/http"
 	"net/http/httptrace"
 	"crypto/tls"
@@ -36,6 +37,8 @@ type urlMeasuredResponse struct {
 	URL				 	string
 	Method			 	string
 	NumberOfRequests 	int
+	Fastest 			time.Duration
+	Slowest				time.Duration
 	AverageDNSTime 		time.Duration
 	AverageConnectTime 	time.Duration
 	AverageTLSTime 		time.Duration
@@ -103,6 +106,8 @@ var executeCmd = &cobra.Command{
 				fmt.Println("Average Connect Time: ", response.AverageConnectTime)
 				fmt.Println("Average TLS Time: ", response.AverageTLSTime)
 				fmt.Println("Average Runtime: ", response.AverageTotalTime)
+				fmt.Println("Fastest Runtime: ", response.Fastest)
+				fmt.Println("Slowest Runtiem: ", response.Slowest)
 				fmt.Println("Status Results: ")
 				for status, count := range response.Status {
 					fmt.Printf("%s: %d\n", status, count)
@@ -122,6 +127,8 @@ func executeLine(line lines, ch chan <- urlMeasuredResponse, waitGroupLine *sync
 	defer waitGroupLine.Done()
 	var wg sync.WaitGroup
 	result := record{
+		Fastest: time.Duration(math.Inf(1)),
+		Slowest: time.Duration(0),
 		Status: make(map[string]int),
 	}
 	
@@ -143,11 +150,19 @@ func executeLine(line lines, ch chan <- urlMeasuredResponse, waitGroupLine *sync
 		result.TotalTLSTimeRecorded += response.TLS
 		result.TotalTimeRecorded += response.TotalTime
 		result.Status[response.Status]++
+		if result.Fastest > response.TotalTime {
+			result.Fastest = response.TotalTime
+		}
+		if result.Slowest < response.TotalTime {
+			result.Slowest = response.TotalTime
+		}
 	}
 	
 	newURLMeasuredResponse := urlMeasuredResponse{
 		URL : 					line.URL,
 		Method : 				"GET",
+		Fastest : 				result.Fastest,
+		Slowest : 				result.Slowest,
 		NumberOfRequests : 		line.NumTimes,
 		AverageDNSTime : 		result.TotalDNSTimeRecorded / time.Duration(times),
 		AverageConnectTime : 	result.TotalConnectTimeRecorded / time.Duration(times),

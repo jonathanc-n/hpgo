@@ -14,6 +14,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"math"
 	"net/http/httptrace"
 	"github.com/spf13/cobra"
 )
@@ -32,6 +33,8 @@ func init() {
 type record struct {
 	URL		  		  		 string
 	Method	  		  		 string
+	Fastest					 time.Duration
+	Slowest					 time.Duration
 	TotalDNSTimeRecorded	 time.Duration
 	TotalConnectTimeRecorded time.Duration
 	TotalTLSTimeRecorded 	 time.Duration
@@ -57,6 +60,8 @@ var stressCmd = &cobra.Command{
 		result := record{ 
 			URL : url, 
 			Method : "GET", 
+			Fastest : time.Duration(math.Inf(0)),
+			Slowest : time.Duration(0),
 			Status: make(map[string]int),
 		} 
 
@@ -91,6 +96,12 @@ var stressCmd = &cobra.Command{
 			result.TotalTLSTimeRecorded += response.TLS
 			result.TotalTimeRecorded += response.TotalTime
 			result.Status[response.Status]++
+			if result.Fastest > response.TotalTime {
+				result.Fastest = response.TotalTime
+			}
+			if result.Slowest < response.TotalTime {
+				result.Slowest = response.TotalTime
+			}
 		}
 		
 		averageDNSTime := result.TotalDNSTimeRecorded / time.Duration(times)
@@ -105,6 +116,8 @@ var stressCmd = &cobra.Command{
 		fmt.Println("Average Connect Runtime:", averageConnectTime)
 		fmt.Println("Average TLS Runtime:", averageTLSTime)
 		fmt.Println("Average Total Runtime:", averageTime)
+		fmt.Println("Fastest Runtime: ", result.Fastest)
+		fmt.Println("Slowest Runtime: ", result.Slowest)
 		fmt.Println("Status Results: ")
 		for status, count := range result.Status {
 			fmt.Printf("%s: %d\n", status, count)

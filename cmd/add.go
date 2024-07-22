@@ -14,10 +14,10 @@ var addCmd = &cobra.Command{
 	Short: "Creates txt file in current directory",
 	Args: func(cmd *cobra.Command, args []string) error {
         if len(args) < 2 {
-            return fmt.Errorf("requires at least one argument")
+            return fmt.Errorf("requires at least two arguments")
         }
         if len(args) > 3 {
-            return fmt.Errorf("requires at most two arguments")
+            return fmt.Errorf("requires at most three arguments")
         }
         return nil
     },
