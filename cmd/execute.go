@@ -40,6 +40,7 @@ type urlMeasuredResponse struct {
 	AverageConnectTime 	time.Duration
 	AverageTLSTime 		time.Duration
 	AverageTotalTime 	time.Duration
+	Status 				map[string]int			
 }
 
 var executeCmd = &cobra.Command{
@@ -53,7 +54,7 @@ var executeCmd = &cobra.Command{
 		}
 
 		filePath := filepath.Join("executable", fileName)
-		var waitGroupLine sync.WaitGroup
+
 
 		if _, err := os.Stat(filePath); err == nil {
 			file, err := os.Open(filePath)
@@ -62,10 +63,12 @@ var executeCmd = &cobra.Command{
 				return
 			}
 			defer file.Close()
-	
+
 			scanner := bufio.NewScanner(file)
 			
 			ch := make(chan urlMeasuredResponse)
+	
+			var waitGroupLine sync.WaitGroup
 			for scanner.Scan() {
 				waitGroupLine.Add(1)
 				line := scanner.Text() 
@@ -76,12 +79,15 @@ var executeCmd = &cobra.Command{
 					fmt.Println("Error converting numTimes to integer:", err)
 					continue
 				}
+				url := parts[0]
+				if !strings.HasPrefix(url, "http://") && !strings.HasPrefix(url, "https://") {
+					url = "http://" + url
+				}
 
 				addLine := lines {
-					URL:      parts[0],
+					URL:      url,
 					NumTimes: numTimes,
 				}
-				fmt.Println("pogger")
 				go executeLine(addLine, ch, &waitGroupLine)
 			}
 
@@ -91,12 +97,16 @@ var executeCmd = &cobra.Command{
 			}()
 
 			for response := range ch {
-				fmt.Println("URL: ", response.URL)
+				fmt.Println("\nURL: ", response.URL)
 				fmt.Println("Number of requests: ", response.NumberOfRequests)
 				fmt.Println("Average DNS Time: ", response.AverageDNSTime)
 				fmt.Println("Average Connect Time: ", response.AverageConnectTime)
 				fmt.Println("Average TLS Time: ", response.AverageTLSTime)
 				fmt.Println("Average Runtime: ", response.AverageTotalTime)
+				fmt.Println("Status Results: ")
+				for status, count := range response.Status {
+					fmt.Printf("%s: %d\n", status, count)
+				}
 			}
 		} else if os.IsNotExist(err) {
 			fmt.Println("File does not exist:", fileName)
@@ -111,7 +121,9 @@ var executeCmd = &cobra.Command{
 func executeLine(line lines, ch chan <- urlMeasuredResponse, waitGroupLine *sync.WaitGroup) {
 	defer waitGroupLine.Done()
 	var wg sync.WaitGroup
-	result := record{}
+	result := record{
+		Status: make(map[string]int),
+	}
 	
 	chMeasured := make(chan measuredResponse, executeFlags.NumWorkers)
 	times := line.NumTimes
@@ -130,24 +142,26 @@ func executeLine(line lines, ch chan <- urlMeasuredResponse, waitGroupLine *sync
 		result.TotalConnectTimeRecorded += response.Connect
 		result.TotalTLSTimeRecorded += response.TLS
 		result.TotalTimeRecorded += response.TotalTime
+		result.Status[response.Status]++
 	}
 	
 	newURLMeasuredResponse := urlMeasuredResponse{
-		URL : line.URL,
-		Method : "GET",
-		NumberOfRequests : line.NumTimes,
-		AverageDNSTime : result.TotalDNSTimeRecorded / time.Duration(times),
-		AverageConnectTime : result.TotalConnectTimeRecorded / time.Duration(times),
-		AverageTLSTime : result.TotalTLSTimeRecorded / time.Duration(times),
-		AverageTotalTime : result.TotalTimeRecorded / time.Duration(times),
+		URL : 					line.URL,
+		Method : 				"GET",
+		NumberOfRequests : 		line.NumTimes,
+		AverageDNSTime : 		result.TotalDNSTimeRecorded / time.Duration(times),
+		AverageConnectTime : 	result.TotalConnectTimeRecorded / time.Duration(times),
+		AverageTLSTime : 		result.TotalTLSTimeRecorded / time.Duration(times),
+		AverageTotalTime : 		result.TotalTimeRecorded / time.Duration(times),
+		Status : 				result.Status,
 	}
 	ch <- newURLMeasuredResponse
 }	
 
-func executeRequest(url string, wg *sync.WaitGroup, ch chan <- measuredResponse) {
+
+func executeRequest(url string, wg *sync.WaitGroup, chMeasured chan <- measuredResponse) {
 	defer wg.Done()
 	req, _ := http.NewRequest("GET", url, nil)
-
 	measured := measuredResponse{}
 	var start, connect, dns, tlsHandshake time.Time
 
@@ -178,10 +192,11 @@ func executeRequest(url string, wg *sync.WaitGroup, ch chan <- measuredResponse)
 	}
 	measured.Start = start
 	measured.Res = resp
+	measured.Status = resp.Status
 	defer resp.Body.Close()
 	
 	if executeFlags.ShowSingleProcesses {
 		fmt.Printf("Status: %s\nTotal Time: %v\n\n", resp.Status, measured.TotalTime)
 	}
-	ch <- measured
+	chMeasured <- measured
 }

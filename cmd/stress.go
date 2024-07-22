@@ -36,6 +36,7 @@ type record struct {
 	TotalConnectTimeRecorded time.Duration
 	TotalTLSTimeRecorded 	 time.Duration
 	TotalTimeRecorded 		 time.Duration
+	Status					 map[string]int
 }
 
 var stressCmd = &cobra.Command{
@@ -53,9 +54,13 @@ var stressCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		url := args[0]
 		times := 1
-		result := record{ URL : url, Method : "GET", TotalTimeRecorded : 0}
-        var err error	
+		result := record{ 
+			URL : url, 
+			Method : "GET", 
+			Status: make(map[string]int),
+		} 
 
+        var err error
         if len(args) == 2 {
             times, err = strconv.Atoi(args[1])
             if err != nil {
@@ -85,6 +90,7 @@ var stressCmd = &cobra.Command{
 			result.TotalConnectTimeRecorded += response.Connect
 			result.TotalTLSTimeRecorded += response.TLS
 			result.TotalTimeRecorded += response.TotalTime
+			result.Status[response.Status]++
 		}
 		
 		averageDNSTime := result.TotalDNSTimeRecorded / time.Duration(times)
@@ -99,6 +105,10 @@ var stressCmd = &cobra.Command{
 		fmt.Println("Average Connect Runtime:", averageConnectTime)
 		fmt.Println("Average TLS Runtime:", averageTLSTime)
 		fmt.Println("Average Total Runtime:", averageTime)
+		fmt.Println("Status Results: ")
+		for status, count := range result.Status {
+			fmt.Printf("%s: %d\n", status, count)
+		}
 	},
 }
 
@@ -109,6 +119,7 @@ type measuredResponse struct {
 	Connect   time.Duration
 	TLS       time.Duration
 	TotalTime time.Duration
+	Status    string
 }
 
 func getRequest(url string, wg *sync.WaitGroup, ch chan <- measuredResponse) {
@@ -147,6 +158,7 @@ func getRequest(url string, wg *sync.WaitGroup, ch chan <- measuredResponse) {
 	}
 	measured.Start = start
 	measured.Res = resp
+	measured.Status = resp.Status
 	defer resp.Body.Close()
 	
 	if stressFlags.ShowSingleProcesses {
