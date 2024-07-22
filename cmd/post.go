@@ -1,11 +1,11 @@
 package cmd
 
 import (
+	"bufio"
 	"fmt"
 	"net/http"
-	"strconv"
+	"encoding/json"
 	"strings"
-	"sync"
 
 	"github.com/spf13/cobra"
 )
@@ -22,66 +22,38 @@ func init() {
 }
 
 var postCmd = &cobra.Command{
-	Use:   "post [url] [numTimes]",
+	Use:   "post [url] [data]",
 	Short: "Sends POST requests to a URL",
-	Args: func(cmd *cobra.Command, args []string) error {
-		if len(args) < 1 {
-			return fmt.Errorf("requires at least one argument")
-		}
-		if len(args) > 2 {
-			return fmt.Errorf("requires at most two arguments")
-		}
-		return nil
-	},
+	Args: cobra.ExactArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
 		url := args[0]
-		times := 1
-		var err error
-
-		if len(args) == 2 {
-			times, err = strconv.Atoi(args[1])
-			if err != nil {
-				fmt.Println("Error converting numTimes to integer:", err)
-				return
-			}
-		}
+		data := args[1]
 
 		if !strings.HasPrefix(url, "http://") && !strings.HasPrefix(url, "https://") {
 			url = "http://" + url
 		}
 
-		var wg sync.WaitGroup
-		ch := make(chan string, times)
-
-		for i := 0; i < times; i++ {
-			wg.Add(1)
-			go postRequest(url, &wg, ch)
+		valid := json.Valid([]byte(data))
+		if !valid {
+			fmt.Println("data provided is not in JSON format")
+			return
 		}
 
-		go func() {
-			wg.Wait()
-			close(ch)
-		}()
+		payload := strings.NewReader(data)
 
-        for result := range ch {
-			fmt.Println(result)
+		resp, err := http.Post(url, "application/json", payload)
+		if err != nil {
+			panic(err)
 		}
+		defer resp.Body.Close()
 
-		fmt.Println("Number of Requests:", times)
-		fmt.Println("Method: 'POST'")
+		fmt.Println("Response status:", resp.Status)
+		scanner := bufio.NewScanner(resp.Body)
+		for scanner.Scan() {
+			fmt.Println(scanner.Text())
+		}
+		if err := scanner.Err(); err != nil {
+			panic(err)
+		}
 	},
-}
-
-func postRequest(url string, wg *sync.WaitGroup, ch chan<- string) {
-	defer wg.Done()
-	req, _ := http.NewRequest("POST", url, nil)
-
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		ch <- fmt.Sprintf("Error: %v", err)
-		return
-	}
-	defer resp.Body.Close()
-
-	ch <- fmt.Sprintf("Status: %s, Headers: %v", resp.Status, resp.Header)
 }
