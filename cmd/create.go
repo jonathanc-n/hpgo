@@ -1,4 +1,11 @@
-// cmd/create.go
+/*
+'create' creates new .txt files inside your executable folder.
+
+Usage:
+
+    create [fileName]
+*/
+
 package cmd
 
 import (
@@ -9,6 +16,7 @@ import (
 	"path/filepath"
 	"bufio"
 )
+
 
 var createCmd = &cobra.Command{
 	Use:   "create [fileName]",

@@ -60,7 +60,7 @@ var getCmd = &cobra.Command{
 				defer resp.Body.Close()
 	
 				fmt.Println("Status:", resp.Status)
-	
+				fmt.Println("Header: ", resp.Header)
 				fmt.Println("Body:")
 				_, err = io.Copy(os.Stdout, resp.Body)
 				if err != nil {

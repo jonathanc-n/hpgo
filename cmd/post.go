@@ -16,8 +16,6 @@ var postFlags struct {
 }
 
 func init() {
-	postCmd.Flags().IntVarP(&postFlags.NumWorkers, "workers", "w", 5, "Number of concurrent go workers")
-    postCmd.Flags().BoolVar(&postFlags.ShowSingleProcesses, "s", false, "Shows single processes")
 	rootCmd.AddCommand(postCmd)
 }
 
