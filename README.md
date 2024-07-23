@@ -1,3 +1,8 @@
-# HTTP CLIgo 
+<h1 align="center">
+    HTTP CLIgo
+</h1>
+<h2 align="center">
+    a simple http cli tool in Go for basic/custom requests, testing, debugging, etc.
+</h2>
 
-## HTTP CLI tool in GO for requests, testing, and benchmarking.
+# Getting Started
