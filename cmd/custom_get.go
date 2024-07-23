@@ -1,10 +1,13 @@
 // cmd/custom_get.go
+
+// Allows for custom headers
 package cmd
 
 import (
 	"fmt"
 	"net/http"
 	"io"
+	"strings"
 	"github.com/spf13/cobra"
 )
 
@@ -34,12 +37,17 @@ func init() {
 	rootCmd.AddCommand(customGetCmd)
 }
 
+
 var customGetCmd = &cobra.Command{
 	Use:   "getc [url]",
-	Short: "Sends GET requests to a URL (customizable)",
+	Short: "Send a GET request to a URL (customizable)",
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		url := args[0]
+
+		if !strings.HasPrefix(url, "http://") && !strings.HasPrefix(url, "https://") {
+            url = "http://" + url
+        }
 
 		req, err := http.NewRequest("GET", url, nil)
 		if err != nil {
@@ -50,7 +58,7 @@ var customGetCmd = &cobra.Command{
 		headers := map[string]string{
 			"Accept":            customGetFlags.Format,
 			"User-Agent":        customGetFlags.UserAgent,
-			"Authorization":     "Bearer " + customGetFlags.AuthToken,
+			"Authorization":     customGetFlags.AuthToken,
 			"X-Client-Version":  customGetFlags.ClientVersion,
 			"X-Api-Key":         customGetFlags.ApiKey,
 			"X-Correlation-ID":  customGetFlags.CorrelationID,
@@ -75,7 +83,8 @@ var customGetCmd = &cobra.Command{
 		if err != nil {
 			panic(err)
 		}
-		fmt.Println("Response status:", resp.Status)
-		fmt.Println("Response body:", string(body))
+		fmt.Println("\nResponse status:\n", resp.Status)
+		fmt.Println("\nResponse header:\n", resp.Header)
+		fmt.Println("\nResponse body:\n", string(body))
 	},
 }
