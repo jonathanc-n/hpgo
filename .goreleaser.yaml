@@ -1,43 +1,32 @@
-# .goreleaser.yaml
-version: 2
-project_name: hpgo
-
 builds:
-  - id: hpgo
-    main: ./cmd/hpgo/main.go
+  - binary: hpgo
     goos:
-      - linux
       - darwin
-      - windows
+      - linux
     goarch:
       - amd64
       - arm64
-    ldflags:
-      - -s -w
     env:
       - CGO_ENABLED=0
-
-archives:
-  - id: hpgo
-    format: tar.gz
-    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
-    files:
-      - README.md
-      - LICENSE
-    builds:
-      - hpgo
+    flags:
+      - -mod=vendor
 
 release:
-  github:
-    owner: jonathanc-n
-    name: hpgo
-  # Move snapshots inside the release block
-  snapshots:
-    name_template: "{{ .Tag }}-next"
+  prelease: auto
 
-changelog:
-  sort: asc
-  filters:
-    exclude:
-      - '^docs:'
-      - '^test:'
+universal_binaries:
+  - replace: true
+
+brews:
+  - 
+    name: hpgo
+    homepage: https://github.com/jonathanc-n/hpgo
+    tap:
+      owner: jonathanc-n
+      name: homebrew-tap
+    commit_author:
+      name: jonathanc-n
+      email: chenleejonathan@gmail.com
+  
+checksum:
+  name_template:'checksums.txt'
