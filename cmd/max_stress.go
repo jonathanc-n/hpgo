@@ -166,6 +166,7 @@ func maxStressRequest(url string, wg *sync.WaitGroup, ch chan <- measuredRespons
 	if err != nil {
 		return
 	}
+	fmt.Println(start)
 	measured.Start = start
 	measured.Res = resp
 	measured.Status = resp.Status
