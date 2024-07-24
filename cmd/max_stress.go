@@ -1,4 +1,4 @@
-// cmd/stress.go
+// cmd/head.go
 //
 // This is all making GET requests to the same url, this
 // process can be simplified using the 'sync' library with the WaitGroup
@@ -19,44 +19,27 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var stressFlags struct {
+var maxStressFlags struct {
 	NumWorkers  		int
 	ShowSingleProcesses bool
+	MaxTime				time.Duration
 }
 
 func init() {
-	stressCmd.Flags().IntVarP(&stressFlags.NumWorkers, "workers", "w", 5, "Number of concurrent go workers")
-	stressCmd.Flags().BoolVar(&stressFlags.ShowSingleProcesses, "s", false, "Shows single processes")
-	rootCmd.AddCommand(stressCmd)
+	// maxStressCmd.Flags().IntVarP(&maxStressFlags.NumWorkers, "workers", "w", 5, "Number of concurrent go workers")
+	maxStressCmd.Flags().BoolVar(&maxStressFlags.ShowSingleProcesses, "s", false, "Shows single processes")
+	maxStressCmd.Flags().DurationVarP(&maxStressFlags.MaxTime, "max-time", "t", 1 * time.Millisecond, "Holds the max time for a variable")
+	rootCmd.AddCommand(maxStressCmd)
 }
 
-type record struct {
-	URL		  		  		 string
-	Method	  		  		 string
-	Fastest					 time.Duration
-	Slowest					 time.Duration
-	TotalDNSTimeRecorded	 time.Duration
-	TotalConnectTimeRecorded time.Duration
-	TotalTLSTimeRecorded 	 time.Duration
-	TotalTimeRecorded 		 time.Duration
-	Status					 map[string]int
-}
-
-var stressCmd = &cobra.Command{
-	Use:   "stress [url] [numTimes]",
+var maxStressCmd = &cobra.Command{
+	Use:   "stressm [url]",
 	Short: "Stress tests a url",
-	Args: func(cmd *cobra.Command, args []string) error {
-        if len(args) < 1 {
-            return fmt.Errorf("requires at least one argument")
-        }
-        if len(args) > 2 {
-            return fmt.Errorf("requires at most two arguments")
-        }
-        return nil
-    },
+	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		url := args[0]
 		times := 1
+	
 		result := record{ 
 			URL : url, 
 			Method : "GET", 
@@ -77,31 +60,54 @@ var stressCmd = &cobra.Command{
 		if !strings.HasPrefix(url, "http://") && !strings.HasPrefix(url, "https://") {
             url = "http://" + url
         }
-		var wg sync.WaitGroup
 
-		ch := make(chan measuredResponse, stressFlags.NumWorkers)
+		incrementArray := [5]int{100, 50, 10, 5, 1}
+		increment := 0
+		checkDuration := time.Duration(0);
+		ch := make(chan measuredResponse)
 
-		for i := 0; i < times; i++ {
-			wg.Add(1)
-			go getRequest(url, &wg, ch)
-		}
-		go func() {
-			wg.Wait()
-			close(ch)
-		}()
+		for checkDuration < maxStressFlags.MaxTime && increment < 5{
+			var wg sync.WaitGroup
+
+			ch = make(chan measuredResponse)
+			startTime := time.Now()
+			for i := 0; i < times; i++ {
+				wg.Add(1)
+				go maxStressRequest(url, &wg, ch)
+			}
+			go func() {
+				wg.Wait()
+				close(ch)
+			}()
+			
+			checkTime := time.Since(startTime)
+			fmt.Println("pog", checkTime)
 	
-		for response := range ch {
-			result.TotalDNSTimeRecorded += response.DNS
-			result.TotalConnectTimeRecorded += response.Connect
-			result.TotalTLSTimeRecorded += response.TLS
-			result.TotalTimeRecorded += response.TotalTime
-			result.Status[response.Status]++
-			if result.Fastest > response.TotalTime {
-				result.Fastest = response.TotalTime
+			if checkTime > maxStressFlags.MaxTime && increment == 4 {
+				for response := range ch {
+					result.TotalDNSTimeRecorded += response.DNS
+					result.TotalConnectTimeRecorded += response.Connect
+					result.TotalTLSTimeRecorded += response.TLS
+					result.TotalTimeRecorded += response.TotalTime
+					result.Status[response.Status]++
+					if result.Fastest > time.Duration(response.TotalTime) {
+						result.Fastest = time.Duration(response.TotalTime)
+					}
+					if result.Slowest < time.Duration(response.TotalTime) {
+						result.Slowest = time.Duration(response.TotalTime)
+					}
+				}
+				break
 			}
-			if result.Slowest < response.TotalTime {
-				result.Slowest = response.TotalTime
+
+			if checkTime > maxStressFlags.MaxTime {
+				increment += 1
+				time.Sleep(1 * time.Second)
+				continue
 			}
+			checkDuration = checkTime
+			times += incrementArray[increment]
+			time.Sleep(1 * time.Second)
 		}
 		
 		averageDNSTime := result.TotalDNSTimeRecorded / time.Duration(times)
@@ -109,7 +115,8 @@ var stressCmd = &cobra.Command{
 		averageTLSTime := result.TotalTLSTimeRecorded / time.Duration(times)
 		averageTime := result.TotalTimeRecorded / time.Duration(times)
 
-		fmt.Println("Number of Requests:", times)
+		fmt.Println("Last stress test run results:")
+		fmt.Println("Max number of requests: ", times)
 		fmt.Println("Method: 'GET'")
 		fmt.Println("Number of concurrent workers:", stressFlags.NumWorkers)
 		fmt.Println("Average DNS Runtime:", averageDNSTime)
@@ -125,17 +132,7 @@ var stressCmd = &cobra.Command{
 	},
 }
 
-type measuredResponse struct {
-	Res       *http.Response
-	Start     time.Time
-	DNS       time.Duration
-	Connect   time.Duration
-	TLS       time.Duration
-	TotalTime time.Duration
-	Status    string
-}
-
-func getRequest(url string, wg *sync.WaitGroup, ch chan <- measuredResponse) {
+func maxStressRequest(url string, wg *sync.WaitGroup, ch chan <- measuredResponse) {
 	defer wg.Done()
 	req, _ := http.NewRequest("GET", url, nil)
 

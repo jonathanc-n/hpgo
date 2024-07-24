@@ -10,11 +10,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var postFlags struct {
-	NumWorkers          int
-    ShowSingleProcesses bool
-}
-
 func init() {
 	rootCmd.AddCommand(postCmd)
 }
