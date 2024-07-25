@@ -1,3 +1,5 @@
+version: 2
+
 builds:
   - binary: hpgo
     goos:
@@ -7,34 +9,24 @@ builds:
     goarch:
       - amd64
       - arm64
-    ignore:
-      - goos: darwin
-        goarch: 386
-      - goos: darwin
-        goarch: arm
-      - goos: windows
-        goarch: 386
     env:
       - CGO_ENABLED=0
     flags:
       - -mod=vendor
 
 release:
-  prelease: auto
+  prerelease: auto
 
 universal_binaries:
   - replace: true
 
 brews:
-  - 
-    name: hpgo
+  - name: hpgo
     homepage: https://github.com/jonathanc-n/hpgo
-    tap:
+    repository:
       owner: jonathanc-n
       name: homebrew-tap
     commit_author:
       name: jonathanc-n
       email: chenleejonathan@gmail.com
-  
-checksum:
-  name_template:'checksums.txt'
+
