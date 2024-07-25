@@ -26,6 +26,9 @@ jobs:
         with:
           go-version: stable
       
+      - name: Run `go mod vendor`
+        run: go mod vendor
+      
       - name: Extract tag name
         id: extract_ref
         run: echo "GITHUB_REF_NAME=${GITHUB_REF##refs/tags/}" >> $GITHUB_ENV
