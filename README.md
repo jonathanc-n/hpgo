@@ -15,7 +15,7 @@ To install this package, navigate to your main directory and use:
 go get github.com/jonathanc-n/hpgo
 ```
 
-# Import this in your main.go file: 
+### Import this in your main.go file: 
 "github.com/jonathanc-n/hpgo/cmd"
 
 ## Commands
